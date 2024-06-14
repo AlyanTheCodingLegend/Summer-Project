@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { WebSocket, WebSocketServer } from 'ws';
-import { ChatManager } from './ChatManager';
+import { ChatManager } from './ChatManager.js';
 
 dotenv.config();
 
