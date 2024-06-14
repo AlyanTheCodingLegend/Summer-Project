@@ -1,5 +1,5 @@
-import { User } from "./User"
-import { Chat } from "./Chat"
+import { User } from "./User.js"
+import { Chat } from "./Chat.js"
 
 export class ChatManager {
     constructor(chats) {
@@ -8,18 +8,22 @@ export class ChatManager {
 
     addUserToChat(userId, chatId, socket) {
         const user = new User(userId, socket)
-        const chat = this.chats.find(c => c.id === chatId)
+        let chat = this.chats.find(c => c.id === chatId)
         if (!chat) {
             chat = new Chat(chatId)
+            this.chats.push(chat)
+            console.log(`Created new chat with id: ${chatId}`)
         }
         chat.addUser(user)
         socket.send(JSON.stringify({ type: 'joinsuccess', chatId: chatId }))
+        console.log(`User ${userId} joined chat ${chatId}`)
     }
 
     removeUserFromChat(userId, chatId, socket) {
         const chat = this.chats.find(c => c.id === chatId)
         if (chat) {
             chat.removeUser(userId)
+            console.log(`User ${userId} left chat ${chatId}`)
             socket.send(JSON.stringify({ type: 'leavesuccess' }))
         } else {
             console.error(`Chat with id ${chatId} not found`)
@@ -55,9 +59,7 @@ export class ChatManager {
         const chat = this.chats.find(c => c.id === chatId)
         if (chat) {
             chat.users.forEach(u => {
-                if (u.socket !== socket) {
-                    u.socket.send(JSON.stringify(message))
-                }
+                u.socket.send(message)
             })
         } else {
             console.error(`Chat with id ${chatId} not found`)
