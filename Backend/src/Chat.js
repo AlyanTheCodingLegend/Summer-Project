@@ -8,7 +8,7 @@ export class Chat {
         this.users.push(user)
     }
 
-    removeUser(user) {
-        this.users = this.users.filter(u => u.id !== user.id)
+    removeUser(userId) {
+        this.users = this.users.filter(u => u.id !== userId)
     }
 }
