@@ -1,14 +1,15 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { WebSocket, WebSocketServer }from 'ws';
+import { WebSocket, WebSocketServer } from 'ws';
+
 dotenv.config();
 
 const app = express();
 
 app.use(express.json());
 app.use(cors());
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 3000;
 
 // add corsOptions here
 
