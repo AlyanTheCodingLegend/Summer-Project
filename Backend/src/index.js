@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { WebSocket, WebSocketServer } from 'ws';
+import { ChatManager } from './ChatManager';
 
 dotenv.config();
 
@@ -18,21 +19,15 @@ const server = app.listen(PORT, () => { console.log("Server is running on port 3
 // add app routers here
 
 
+// create a ChatManager instance to handle chats and users
+
+const chatManager = new ChatManager();
+
 // initialise ws server
 const wss = new WebSocketServer({ server });
 
 wss.on('connection', (ws) => { 
-    console.log('New client connected!'); 
-
-    ws.on('message', (message) => 
-    {
-        console.log(`Received: ${message}`);
-        wss.clients.forEach(client => {
-            if (client !== ws && client.readyState === WebSocket.OPEN) {client.send(message)}    
-        });
-    });
-
-    ws.on('close', () => console.log("Client disconnected!"))
+    chatManager.addHandler(ws)
 });
 
 // error middleware (use in catch blocks in endpoints)

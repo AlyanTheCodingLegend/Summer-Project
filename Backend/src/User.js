@@ -1,7 +1,6 @@
 export class User {
-    constructor(id, username, socket) {
+    constructor(id, socket) {
         this.id = id;
-        this.username = username;
         this.socket = socket;
     }
 }
