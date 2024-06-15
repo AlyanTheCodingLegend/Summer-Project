@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import AudioSlider from './AudioSlider'
 
 function ChatRoom() {
     const [text, setText] = useState('')
@@ -8,6 +9,35 @@ function ChatRoom() {
     const [messages, setMessages] = useState([])
     const [mediaRecorder, setMediaRecorder] = useState(null)
     const [recording, setRecording] = useState(false)
+    const [audio, setAudio] = useState(null)
+
+    const handleReceivedText = (data) => {
+        const message = JSON.parse(data)
+        switch(message.type) {
+            case 'joinsuccess':
+                console.log('Joined chat')
+                setChatId(message.chatId)
+                setMessages(message.messages)
+                break
+            case 'leavesuccess':
+                console.log('Left chat')
+                setMessages([])
+                socket.close()
+                break
+            case 'leavefailure':
+                console.log('Failed to leave chat')
+                break
+            case 'messagereceived':
+                setMessages(message.messages)
+                break        
+            case 'voicereceived':
+                setMessages(message.messages)
+                break    
+            default:
+                console.error(`Unknown message type: ${message.type}`)
+                break        
+        }
+    }
 
     const handleText = (e) => {
         setText(e.target.value)
@@ -75,7 +105,7 @@ function ChatRoom() {
         }
     }
     
-    const playReceivedAudio = (audioData) => {
+    const processReceivedAudio = (audioData) => {
         try {
             const binaryString = window.atob(audioData);
             const bytes = new Uint8Array(binaryString.length);
@@ -85,11 +115,19 @@ function ChatRoom() {
             const audioBlob = new Blob([bytes], { type: 'audio/webm' });
             const audioUrl = URL.createObjectURL(audioBlob);
             const audio = new Audio(audioUrl);
-            audio.play().catch(error => console.error('Error playing audio:', error));
+            setAudio(audio);
         } catch (error) {
             console.error('Error handling audio data:', error);
         }
     }
+
+    const playAudio = () => {
+        if (audio) {
+            audio.play();
+        } else {
+            console.error('No audio to play');
+        }
+    }        
 
     const joinChat = () => {
         const ws = new WebSocket('ws://localhost:3000')
@@ -100,42 +138,17 @@ function ChatRoom() {
         socket.send(JSON.stringify({ type: 'leave', userId: userId, chatId: chatId }))
     }
 
-    const handleReceivedText = (data) => {
-        const message = JSON.parse(data)
-        switch(message.type) {
-            case 'joinsuccess':
-                console.log('Joined chat')
-                setChatId(message.chatId)
-                setMessages(message.messages)
-                break
-            case 'leavesuccess':
-                console.log('Left chat')
-                setMessages([])
-                socket.close()
-                break
-            case 'leavefailure':
-                console.log('Failed to leave chat')
-                break
-            case 'messagereceived':
-                setMessages(message.messages)
-                break        
-            case 'voicereceived':
-                console.log('Voice received')
-                playReceivedAudio(message.audio)
-                break    
-            default:
-                console.error(`Unknown message type: ${message.type}`)
-                break        
-        }
-    }
-
     return (
         <div className="bg-gray-900 h-screen w-screen flex flex-col justify-between items-center p-4">
             <div className="bg-white h-5/6 w-full max-w-2xl overflow-auto p-4 rounded shadow-md">
                 {messages.map((msg, index) => (
-                    <div key={index} className="p-2 mb-2 border-b border-gray-300 text-black">
-                        <strong>{msg.from}:</strong> {msg.text}
-                    </div>
+                    (msg.text) ? (
+                        <div key={index} className="p-2 mb-2 border-b border-gray-300 text-black">
+                            <strong>{msg.from}:</strong> {msg.text}
+                        </div>
+                    ) : (
+                        <AudioSlider index={index} msg={msg} processReceivedAudio={processReceivedAudio} playAudio={playAudio}/>
+                    )
                 ))}
             </div>
             <div className="bg-white w-full max-w-2xl flex items-center p-4 rounded shadow-md mt-4">
@@ -189,4 +202,4 @@ function ChatRoom() {
     );
 }
 
-export default ChatRoom
+export default ChatRoom;
