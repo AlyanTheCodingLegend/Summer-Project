@@ -6,6 +6,8 @@ function ChatRoom() {
     const [chatId, setChatId] = useState(444)
     const [userId, setUserId] = useState(123)
     const [messages, setMessages] = useState([])
+    const [mediaRecorder, setMediaRecorder] = useState(null)
+    const [recording, setRecording] = useState(false)
 
     const handleText = (e) => {
         setText(e.target.value)
@@ -29,12 +31,65 @@ function ChatRoom() {
                 console.log('Disconnected from server')
                 setSocket(null)
             }
+            socket.onerror = (error) => {
+                console.error(`Error: ${error.message}`)
+            }    
         }    
     }, [socket])
 
     useEffect(() => {
         setUserId(Math.floor(Math.random() * 90000) + 10000)
     }, [])    
+
+    const startStreaming = async () => {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          console.log('Audio stream obtained');
+    
+          const mediaRecorderInstance = new MediaRecorder(stream);
+          setMediaRecorder(mediaRecorderInstance);
+    
+          mediaRecorderInstance.ondataavailable = (event) => {
+            if (event.data.size > 0 && socket && socket.readyState === WebSocket.OPEN) {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    const base64Data = reader.result.split(',')[1];
+                    socket.send(JSON.stringify({ type: "voicesent", userId: userId, chatId: chatId, audio: base64Data }));
+                };
+                reader.readAsDataURL(event.data)
+            }
+          };
+    
+          mediaRecorderInstance.start();
+          setRecording(true);
+        } catch (error) {
+          console.error('Error accessing microphone:', error);
+        }
+    }
+
+    const stopStreaming = () => {
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+          mediaRecorder.stop();
+          console.log('Stopped recording');
+          setRecording(false);
+        }
+    }
+    
+    const playReceivedAudio = (audioData) => {
+        try {
+            const binaryString = window.atob(audioData);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            const audioBlob = new Blob([bytes], { type: 'audio/webm' });
+            const audioUrl = URL.createObjectURL(audioBlob);
+            const audio = new Audio(audioUrl);
+            audio.play().catch(error => console.error('Error playing audio:', error));
+        } catch (error) {
+            console.error('Error handling audio data:', error);
+        }
+    }
 
     const joinChat = () => {
         const ws = new WebSocket('ws://localhost:3000')
@@ -64,6 +119,10 @@ function ChatRoom() {
             case 'messagereceived':
                 setMessages(message.messages)
                 break        
+            case 'voicereceived':
+                console.log('Voice received')
+                playReceivedAudio(message.audio)
+                break    
             default:
                 console.error(`Unknown message type: ${message.type}`)
                 break        
@@ -108,6 +167,22 @@ function ChatRoom() {
                     disabled={socket === null}
                 >
                     Leave
+                </button>
+            </div>
+            <div className="absolute bottom-20 right-4 flex space-x-2">
+                <button 
+                    className="bg-green-500 hover:bg-green-700 text-white p-2 rounded" 
+                    onClick={startStreaming} 
+                    disabled={recording}
+                >
+                    Start
+                </button>
+                <button 
+                    className="bg-red-500 hover:bg-red-700 text-white p-2 rounded" 
+                    onClick={stopStreaming} 
+                    disabled={!recording}
+                >
+                    Stop
                 </button>
             </div>
         </div>

@@ -35,7 +35,7 @@ export class ChatManager {
         const chat = this.chats.find(c => c.id === chatId)
         if (chat) {
             chat.addMessage(message)
-            this.broadcastMessage(chatId, JSON.stringify({ type: 'messagereceived', messages: chat.messages}))
+            this.broadcastMessageIncludingSender(chatId, JSON.stringify({ type: 'messagereceived', messages: chat.messages}))
         } else {
             console.error(`Chat with id ${chatId} not found`)
         }
@@ -54,6 +54,9 @@ export class ChatManager {
                 case 'messagesent':
                     this.addMessageToChat(message.chatId, { from: message.userId, text: message.text })
                     break
+                case 'voicesent':
+                    this.broadcastMessage(socket, message.chatId, JSON.stringify({ type: 'voicereceived', userId: message.userId, audio: message.audio }))
+                    break    
                 default:
                     console.error(`Unknown message type: ${message.type}`)
                     break
@@ -65,11 +68,24 @@ export class ChatManager {
         })
     }
 
-    broadcastMessage(chatId, message) {
+    broadcastMessageIncludingSender(chatId, message) {
         const chat = this.chats.find(c => c.id === chatId)
         if (chat) {
             chat.users.forEach(u => {
                 u.socket.send(message)
+            })
+        } else {
+            console.error(`Chat with id ${chatId} not found`)
+        }
+    }
+
+    broadcastMessage(socket, chatId, message) {
+        const chat = this.chats.find(c => c.id === chatId)
+        if (chat) {
+            chat.users.forEach(u => {
+                if (u.socket!==socket) {
+                    u.socket.send(message)
+                }    
             })
         } else {
             console.error(`Chat with id ${chatId} not found`)
