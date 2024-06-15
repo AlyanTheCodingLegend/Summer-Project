@@ -2,7 +2,7 @@ import { User } from "./User.js"
 import { Chat } from "./Chat.js"
 
 export class ChatManager {
-    constructor(chats) {
+    constructor() {
         this.chats = []
     }
 
@@ -15,7 +15,7 @@ export class ChatManager {
             console.log(`Created new chat with id: ${chatId}`)
         }
         chat.addUser(user)
-        socket.send(JSON.stringify({ type: 'joinsuccess', chatId: chatId }))
+        socket.send(JSON.stringify({ type: 'joinsuccess', chatId: chatId, messages: chat.messages }))
         console.log(`User ${userId} joined chat ${chatId}`)
     }
 
@@ -31,6 +31,16 @@ export class ChatManager {
         }
     }
 
+    addMessageToChat(chatId, message) {
+        const chat = this.chats.find(c => c.id === chatId)
+        if (chat) {
+            chat.addMessage(message)
+            this.broadcastMessage(chatId, JSON.stringify({ type: 'messagereceived', messages: chat.messages}))
+        } else {
+            console.error(`Chat with id ${chatId} not found`)
+        }
+    }
+
     addHandler(socket) {
         socket.on('message', (data) => {
             const message = JSON.parse(data.toString())
@@ -42,7 +52,7 @@ export class ChatManager {
                     this.removeUserFromChat(message.userId, message.chatId, socket)
                     break
                 case 'messagesent':
-                    this.broadcastMessage(socket, message.chatId, JSON.stringify({ type: 'messagereceived', from: message.userId, text: message.text}))
+                    this.addMessageToChat(message.chatId, { from: message.userId, text: message.text })
                     break
                 default:
                     console.error(`Unknown message type: ${message.type}`)
@@ -55,7 +65,7 @@ export class ChatManager {
         })
     }
 
-    broadcastMessage(socket, chatId, message) {
+    broadcastMessage(chatId, message) {
         const chat = this.chats.find(c => c.id === chatId)
         if (chat) {
             chat.users.forEach(u => {

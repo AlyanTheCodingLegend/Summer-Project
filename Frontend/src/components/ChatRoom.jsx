@@ -51,16 +51,18 @@ function ChatRoom() {
             case 'joinsuccess':
                 console.log('Joined chat')
                 setChatId(message.chatId)
+                setMessages(message.messages)
                 break
             case 'leavesuccess':
                 console.log('Left chat')
+                setMessages([])
                 socket.close()
                 break
             case 'leavefailure':
                 console.log('Failed to leave chat')
                 break
             case 'messagereceived':
-                setMessages(prevMessages => [...prevMessages, message])
+                setMessages(message.messages)
                 break        
             default:
                 console.error(`Unknown message type: ${message.type}`)
