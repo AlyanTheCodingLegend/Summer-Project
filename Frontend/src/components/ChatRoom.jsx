@@ -9,7 +9,6 @@ function ChatRoom() {
     const [messages, setMessages] = useState([])
     const [mediaRecorder, setMediaRecorder] = useState(null)
     const [recording, setRecording] = useState(false)
-    const [audio, setAudio] = useState(null)
 
     const handleReceivedText = (data) => {
         const message = JSON.parse(data)
@@ -105,30 +104,6 @@ function ChatRoom() {
         }
     }
     
-    const processReceivedAudio = (audioData) => {
-        try {
-            const binaryString = window.atob(audioData);
-            const bytes = new Uint8Array(binaryString.length);
-            for (let i = 0; i < binaryString.length; i++) {
-                bytes[i] = binaryString.charCodeAt(i);
-            }
-            const audioBlob = new Blob([bytes], { type: 'audio/webm' });
-            const audioUrl = URL.createObjectURL(audioBlob);
-            const audio = new Audio(audioUrl);
-            setAudio(audio);
-        } catch (error) {
-            console.error('Error handling audio data:', error);
-        }
-    }
-
-    const playAudio = () => {
-        if (audio) {
-            audio.play();
-        } else {
-            console.error('No audio to play');
-        }
-    }        
-
     const joinChat = () => {
         const ws = new WebSocket('ws://localhost:3000')
         setSocket(ws)
@@ -147,7 +122,7 @@ function ChatRoom() {
                             <strong>{msg.from}:</strong> {msg.text}
                         </div>
                     ) : (
-                        <AudioSlider index={index} msg={msg} processReceivedAudio={processReceivedAudio} playAudio={playAudio}/>
+                        <AudioSlider msg={msg} index={index}/>
                     )
                 ))}
             </div>
