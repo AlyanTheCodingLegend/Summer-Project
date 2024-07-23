@@ -1,8 +1,8 @@
-import express from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { WebSocketServer } from 'ws';
-import { ChatManager } from './ChatManager.js';
+import { ChatManager } from './ChatManager';
 
 dotenv.config();
 
@@ -31,7 +31,7 @@ wss.on('connection', (ws) => {
 });
 
 // error middleware (use in catch blocks in endpoints)
-app.use((error, request, response, next) => {
+app.use((error: any, request: Request, response: Response, next: NextFunction) => {
     const statusCode = error.statusCode || 500;
     const message = error.message || "Internal Server Error";
     return response.status(statusCode).json(
