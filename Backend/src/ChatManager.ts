@@ -1,12 +1,32 @@
-import { User } from "./User.js"
-import { Chat } from "./Chat.js"
+import { User } from "./User"
+import { Chat } from "./Chat"
+import { WebSocket } from "ws"
+import { z } from 'zod'
+
+const MessageSchema = z.object({
+    type: z.string(),
+    userId: z.number(),
+    chatId: z.number(),
+    text: z.string().optional(),
+    audio: z.string().optional()
+})
+
+export type Message = z.infer<typeof MessageSchema>
+
+export type MessageType = {
+    from: number,
+    text?: string,
+    audio?: string
+}
 
 export class ChatManager {
+    chats: Chat[]
+
     constructor() {
         this.chats = []
     }
 
-    addUserToChat(userId, chatId, socket) {
+    addUserToChat(userId: number, chatId: number, socket: WebSocket) {
         const user = new User(userId, socket)
         let chat = this.chats.find(c => c.id === chatId)
         if (!chat) {
@@ -19,7 +39,7 @@ export class ChatManager {
         console.log(`User ${userId} joined chat ${chatId}`)
     }
 
-    removeUserFromChat(userId, chatId, socket) {
+    removeUserFromChat(userId: number, chatId: number, socket: WebSocket) {
         const chat = this.chats.find(c => c.id === chatId)
         if (chat) {
             chat.removeUser(userId)
@@ -31,7 +51,7 @@ export class ChatManager {
         }
     }
 
-    addMessageToChat(chatId, message) {
+    addMessageToChat(chatId: number, message: MessageType) {
         const chat = this.chats.find(c => c.id === chatId)
         if (chat) {
             chat.addMessage(message)
@@ -41,7 +61,7 @@ export class ChatManager {
         }
     }
 
-    addVoiceToChat(chatId, message) {
+    addVoiceToChat(chatId: number, message: MessageType) {
         const chat = this.chats.find(c => c.id === chatId)
         if (chat) {
             chat.addMessage(message)
@@ -51,9 +71,11 @@ export class ChatManager {
         }
     }
 
-    addHandler(socket) {
+    addHandler(socket: WebSocket) {
         socket.on('message', (data) => {
-            const message = JSON.parse(data.toString())
+            const possiblemessage = JSON.parse(data.toString())
+            const message = MessageSchema.parse(possiblemessage)
+
             switch(message.type) {
                 case 'join':
                     this.addUserToChat(message.userId, message.chatId, socket)
@@ -78,7 +100,7 @@ export class ChatManager {
         })
     }
 
-    broadcastMessageIncludingSender(chatId, message) {
+    broadcastMessageIncludingSender(chatId: number, message: string) {
         const chat = this.chats.find(c => c.id === chatId)
         if (chat) {
             chat.users.forEach(u => {
@@ -89,7 +111,7 @@ export class ChatManager {
         }
     }
 
-    broadcastMessage(socket, chatId, message) {
+    broadcastMessage(socket: WebSocket, chatId: number, message: string) {
         const chat = this.chats.find(c => c.id === chatId)
         if (chat) {
             chat.users.forEach(u => {
